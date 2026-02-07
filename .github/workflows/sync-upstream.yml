@@ -1,0 +1,45 @@
+name: 'Upstream Sync'
+
+on:
+  schedule:
+    - cron:  '0 7 * * *' # chạy mỗi ngày lúc 7:00 UTC (14:00 VN)
+  workflow_dispatch: # có thể bấm nút chạy thủ công
+
+jobs:
+  sync_latest_from_upstream:
+    runs-on: ubuntu-latest
+    name: Sync latest commits from upstream repo
+
+    permissions:
+      contents: write # quan trọng: cho phép workflow push code
+
+    steps:
+    # Bước 1: Checkout repo hiện tại
+    - name: Checkout target repo
+      uses: actions/checkout@v3
+      with:
+        ref: main
+        persist-credentials: false
+
+    # Bước 2: Chạy action sync
+    - name: Sync upstream changes
+      id: sync
+      uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+      with:
+        target_sync_branch: main
+        # Token mặc định của Github Actions
+        target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+        upstream_sync_repo: router-for-me/CLIProxyAPIPlus
+        upstream_sync_branch: main
+        
+        # Cái này để test, set false để chạy thật
+        test_mode: false
+      
+    # Bước 3: Log kết quả
+    - name: New commits found
+      if: steps.sync.outputs.has_new_commits == 'true'
+      run: echo "New commits were found to sync."
+    
+    - name: No new commits
+      if: steps.sync.outputs.has_new_commits == 'false'
+      run: echo "There were no new commits."
